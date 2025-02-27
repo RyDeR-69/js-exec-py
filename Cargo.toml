@@ -1,0 +1,39 @@
+[package]
+name = "js-exec-py"
+version = "0.1.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "js_exec"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stubs_gen"
+doc = false
+
+[features]
+default = ["fetch", "ion/sourcemap"]
+fetch = ["js_runtime/fetch"]
+
+[dependencies]
+# js runtime
+ion = { git = "https://github.com/Redfire75369/spiderfire.git", rev = "28e86a5" }
+js_runtime = { git = "https://github.com/Redfire75369/spiderfire.git", rev = "28e86a5", package = "runtime" }
+modules = { git = "https://github.com/Redfire75369/spiderfire.git", rev = "28e86a5" }
+mozjs = { git = "https://github.com/servo/mozjs" }
+
+# python bindings
+pyo3 = { version = "0.23.3", features = ["abi3-py310", "macros", "extension-module", "auto-initialize", "multiple-pymethods"] }
+pyo3-stub-gen = "0.7.0"
+
+# other
+ouroboros = "0.18.5"
+macros = { path = "macros", package = "js-exec-py-macros" }
+sourcemap = "9.1.2"
+
+# patch same repo, but different rev
+[patch."https://github.com/servo/mozjs"]
+mozjs = { git = "https://github.com/servo/mozjs?rev=87cabf4e9ddf9fafe19713a3d6bc8c5e6105544c" }
+
+
