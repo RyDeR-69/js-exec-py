@@ -6,7 +6,7 @@ A Python library that provides JavaScript execution capabilities from Python, bu
 
 Currently only building from source
 ```bash
-pip install pip install git+https://github.com/RyDeR-69/js-exec-py.git
+pip install git+https://github.com/RyDeR-69/js-exec-py.git
 ```
 
 ## Quick Start
