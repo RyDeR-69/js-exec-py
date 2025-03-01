@@ -1,5 +1,6 @@
 use ion::{
-    BigInt as JSBigInt, Function as JSFunction, Object as JSObject, OwnedKey, Value as JSValue,
+    BigInt as JSBigInt, Function as JSFunction, Object as JSObject, OwnedKey, Promise as JSPromise,
+    Value as JSValue, module::Module as JSModule,
 };
 
 /// A trait for extending the lifetime of JavaScript values.
@@ -81,5 +82,19 @@ impl<'a> ExtendLifetime for ion::PropertyKey<'a> {
     type Output = ion::PropertyKey<'static>;
     fn extend_lifetime(self) -> Self::Output {
         unsafe { std::mem::transmute::<ion::PropertyKey<'a>, Self::Output>(self) }
+    }
+}
+
+impl<'a> ExtendLifetime for JSModule<'a> {
+    type Output = JSModule<'static>;
+    fn extend_lifetime(self) -> Self::Output {
+        unsafe { std::mem::transmute::<JSModule<'a>, Self::Output>(self) }
+    }
+}
+
+impl<'a> ExtendLifetime for JSPromise<'a> {
+    type Output = JSPromise<'static>;
+    fn extend_lifetime(self) -> Self::Output {
+        unsafe { std::mem::transmute::<JSPromise<'a>, Self::Output>(self) }
     }
 }

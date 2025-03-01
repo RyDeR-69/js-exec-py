@@ -247,7 +247,9 @@ class JSFunction:
         """
         ...
 
-    def call(self, args: typing.Sequence[JSValue], this: typing.Optional[JSObject] = None) -> JSValue:
+    def call(
+        self, args: typing.Optional[typing.Sequence[JSValue]] = None, this: typing.Optional[JSObject] = None
+    ) -> JSValue:
         r"""
         Calls the [JSFunction] with the given `this` [JSObject] and arguments.
         Returns the result of the [JSFunction] as a [JSValue].
@@ -276,6 +278,26 @@ class JSFunction:
     def is_null(self) -> builtins.bool: ...
     def is_aligned(self) -> builtins.bool: ...
     def __str__(self) -> builtins.str: ...
+
+class JSModule:
+    def compile_and_evaluate(
+        self,
+        source: builtins.str,
+        filename: builtins.str = "inline.js",
+        path: typing.Optional[builtins.str] = "inline.js",
+    ) -> tuple[JSModule, typing.Optional[JSPromise]]:
+        r"""
+        Compiles and evaluates a [Module] with the given source and filename.
+        On success, returns the compiled module object and a promise. The promise resolves with the return value of the module.
+        The promise is a byproduct of enabling top-level await.
+        """
+        ...
+
+    def is_linked(self) -> builtins.bool:
+        r"""
+        Returns `true` if the module has been linked.
+        """
+        ...
 
 class JSObject:
     def __init__(self) -> JSObject: ...
@@ -409,6 +431,61 @@ class JSObject:
     def is_aligned(self) -> builtins.bool: ...
     def __str__(self) -> builtins.str: ...
 
+class JSPromise:
+    r"""
+    Represents a [JSPromise] in the JavaScript Runtime.
+    Refer to [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) for more details.
+    """
+    def __init__(self) -> JSPromise: ...
+    @staticmethod
+    def from_value(value: JSValue) -> JSPromise:
+        r"""
+        Creates a new [JSPromise] from a [JSValue].
+        """
+        ...
+
+    @staticmethod
+    def resolved(value: JSValue) -> JSPromise:
+        r"""
+        Creates a new [Promise], that is resolved to the given value.
+        Similar to `Promise.resolve`
+        """
+        ...
+
+    def id(self) -> builtins.int:
+        r"""
+        Returns the ID of the [JSPromise].
+        """
+        ...
+
+    def state(self) -> JSPromiseState:
+        r"""
+        Returns the state of the [JSPromise].
+
+        The state can be `Pending`, `Fulfilled` and `Rejected`.
+        """
+        ...
+
+    def result(self) -> JSValue:
+        r"""
+        Returns the result of the [JSPromise].
+        """
+        ...
+
+    def resolve(self, value: JSValue) -> builtins.bool:
+        r"""
+        Resolves the [JSPromise] with the given [JSValue].
+        """
+        ...
+
+    def reject(self, value: JSValue) -> builtins.bool:
+        r"""
+        Rejects the [JSPromise] with the given [JSValue].
+        """
+        ...
+
+    def __str__(self) -> builtins.str: ...
+
 class JSValue:
     r"""
     Represents a JavaScript value in the Python environment.
@@ -467,21 +544,27 @@ class JSValue:
         python_float = value.to_double()
     ```
     """
-    def to_number(self) -> typing.Optional[builtins.float]:
+    def to_function(self) -> JSFunction:
         r"""
-        Converts to a number if the value is a number.
+        Converts to a JSFunction if the value is a function.
         """
         ...
 
-    def to_double(self) -> typing.Optional[builtins.float]:
+    def to_promise(self) -> JSPromise:
         r"""
-        Converts to a double if the value is a double.
+        Converts to a JSPromise if the value is a promise.
         """
         ...
 
-    def to_int32(self) -> typing.Optional[builtins.int]:
+    def to_object(self) -> JSObject:
         r"""
-        Converts to an integer if the value is a 32-bit integer.
+        Converts to a JSObject if the value is an object.
+        """
+        ...
+
+    def to_symbol(self) -> Symbol:
+        r"""
+        Converts to a Symbol if the value is a symbol.
         """
         ...
 
@@ -491,87 +574,27 @@ class JSValue:
         """
         ...
 
-    def is_markable(self) -> builtins.bool:
+    def to_int32(self) -> typing.Optional[builtins.int]:
         r"""
-        Checks if the value is markable by the garbage collector.
+        Converts to an integer if the value is a 32-bit integer.
         """
         ...
 
-    def is_gcthing(self) -> builtins.bool:
+    def to_double(self) -> typing.Optional[builtins.float]:
         r"""
-        Checks if the value is a garbage collected thing.
+        Converts to a double if the value is a double.
         """
         ...
 
-    def is_bigint(self) -> builtins.bool:
+    def to_number(self) -> typing.Optional[builtins.float]:
         r"""
-        Checks if the value is a BigInt.
+        Converts to a number if the value is a number.
         """
         ...
 
-    def is_symbol(self) -> builtins.bool:
+    def is_undefined(self) -> builtins.bool:
         r"""
-        Checks if the value is a symbol.
-        """
-        ...
-
-    def is_magic(self) -> builtins.bool:
-        r"""
-        Checks if the value is a magic value.
-        """
-        ...
-
-    def is_object_or_null(self) -> builtins.bool:
-        r"""
-        Checks if the value is an object or null.
-        """
-        ...
-
-    def is_object(self) -> builtins.bool:
-        r"""
-        Checks if the value is an object.
-        """
-        ...
-
-    def is_string(self) -> builtins.bool:
-        r"""
-        Checks if the value is a string.
-        """
-        ...
-
-    def is_primitive(self) -> builtins.bool:
-        r"""
-        Checks if the value is a primitive.
-        """
-        ...
-
-    def is_number(self) -> builtins.bool:
-        r"""
-        Checks if the value is a number.
-        """
-        ...
-
-    def is_double(self) -> builtins.bool:
-        r"""
-        Checks if the value is a double.
-        """
-        ...
-
-    def is_int32(self) -> builtins.bool:
-        r"""
-        Checks if the value is a 32-bit integer.
-        """
-        ...
-
-    def is_boolean(self) -> builtins.bool:
-        r"""
-        Checks if the value is a boolean.
-        """
-        ...
-
-    def is_null_or_undefined(self) -> builtins.bool:
-        r"""
-        Checks if the value is null or undefined.
+        Checks if the value is undefined.
         """
         ...
 
@@ -581,9 +604,87 @@ class JSValue:
         """
         ...
 
-    def is_undefined(self) -> builtins.bool:
+    def is_null_or_undefined(self) -> builtins.bool:
         r"""
-        Checks if the value is undefined.
+        Checks if the value is null or undefined.
+        """
+        ...
+
+    def is_boolean(self) -> builtins.bool:
+        r"""
+        Checks if the value is a boolean.
+        """
+        ...
+
+    def is_int32(self) -> builtins.bool:
+        r"""
+        Checks if the value is a 32-bit integer.
+        """
+        ...
+
+    def is_double(self) -> builtins.bool:
+        r"""
+        Checks if the value is a double.
+        """
+        ...
+
+    def is_number(self) -> builtins.bool:
+        r"""
+        Checks if the value is a number.
+        """
+        ...
+
+    def is_primitive(self) -> builtins.bool:
+        r"""
+        Checks if the value is a primitive.
+        """
+        ...
+
+    def is_string(self) -> builtins.bool:
+        r"""
+        Checks if the value is a string.
+        """
+        ...
+
+    def is_object(self) -> builtins.bool:
+        r"""
+        Checks if the value is an object.
+        """
+        ...
+
+    def is_object_or_null(self) -> builtins.bool:
+        r"""
+        Checks if the value is an object or null.
+        """
+        ...
+
+    def is_magic(self) -> builtins.bool:
+        r"""
+        Checks if the value is a magic value.
+        """
+        ...
+
+    def is_symbol(self) -> builtins.bool:
+        r"""
+        Checks if the value is a symbol.
+        """
+        ...
+
+    def is_bigint(self) -> builtins.bool:
+        r"""
+        Checks if the value is a BigInt.
+        """
+        ...
+
+    def is_gcthing(self) -> builtins.bool:
+        r"""
+        Checks if the value is a garbage collected thing.
+        """
+        ...
+
+    def is_markable(self) -> builtins.bool:
+        r"""
+        Checks if the value is markable by the garbage collector.
         """
         ...
 
@@ -633,12 +734,6 @@ class JSValue:
     def symbol(value: Symbol) -> JSValue:
         r"""
         Creates a [JSValue] from a [Symbol].
-        """
-        ...
-
-    def to_object(self) -> JSObject:
-        r"""
-        Converts a [JSValue] to an [JSObject].
         """
         ...
 
@@ -820,15 +915,16 @@ class Runtime:
     """
     def __init__(
         self,
-        microtask_queue: builtins.bool = False,
-        macrotask_queue: builtins.bool = False,
+        microtask_queue: builtins.bool = True,
+        macrotask_queue: builtins.bool = True,
         script: builtins.bool = False,
         typescript: builtins.bool = True,
         log_level: builtins.int = 0,
     ) -> Runtime: ...
     def compile_and_evaluate_script(self, source: builtins.str, filename: builtins.str = "inline.js") -> JSValue:
         r"""
-        Compiles and evaluates JavaScript code.
+        Compiles and evaluates a script with a given filename, and returns its return value.
+        Returns [Err] when script compilation fails or an exception occurs during script evaluation.
 
         This method compiles the provided JavaScript code and executes it in the
         JavaScript runtime, returning the result as a JSValue.
@@ -858,9 +954,11 @@ class Runtime:
         source: builtins.str,
         filename: builtins.str = "inline.js",
         path: typing.Optional[builtins.str] = "inline.js",
-    ) -> tuple[builtins.bool, typing.Optional[JSValue]]:
+    ) -> tuple[JSModule, typing.Optional[JSPromise]]:
         r"""
-        TODO: Full support for modules
+        Compiles and evaluates a [Module] with the given source and filename.
+        On success, returns the compiled module object and a promise. The promise resolves with the return value of the module.
+        The promise is a byproduct of enabling top-level await.
         """
         ...
 
@@ -871,6 +969,8 @@ class Runtime:
         TODO: Full support for typescript
         """
         ...
+
+    def run_event_loop(self) -> None: ...
 
 class SourceMap:
     def __repr__(self) -> builtins.str: ...
@@ -945,6 +1045,11 @@ class SymbolCode:
         ...
 
     def __repr__(self) -> builtins.str: ...
+
+class JSPromiseState(Enum):
+    Pending = auto()
+    Fulfilled = auto()
+    Rejected = auto()
 
 class WellKnownSymbolCode(Enum):
     IsConcatSpreadable = auto()

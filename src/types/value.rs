@@ -3,11 +3,15 @@ use crate::runtime::with_js_cx;
 use crate::traits::ExtendLifetime;
 use crate::r#typeof;
 use crate::types::bigint::PyJSBigInt;
+use crate::types::function::PyJSFunction;
 use crate::types::object::PyJSObject;
+use crate::types::promise::PyJSPromise;
 use crate::types::symbol::PySymbol;
-use ion::Value as JSValue;
 use ion::conversions::FromValue;
 use ion::format::{Config, format_value};
+use ion::{
+    Function as JSFunction, Object as JSObject, Promise as JSPromise, Symbol, Value as JSValue,
+};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -15,26 +19,26 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 // Macro for generating type checking methods
 macro_rules! define_is_methods {
     ($(($method:ident, $doc:expr)),* $(,)?) => {
-        $(
-            #[gen_stub_pymethods]
-            #[pymethods]
-            impl PyJSValue {
+        #[gen_stub_pymethods]
+        #[pymethods]
+        impl PyJSValue {
+            $(
                 #[doc = $doc]
                 pub fn $method(&self) -> bool {
                     self.0.handle().$method()
                 }
-            }
-        )*
+            )*
+        }
     };
 }
 
-// Macro for generating type conversion methods
+// Macro for generating type conversion methods of value handle
 macro_rules! define_to_methods {
     ($(($method:ident, $check:ident, $type:ty, $doc:expr)),* $(,)?) => {
-        $(
-            #[gen_stub_pymethods]
-            #[pymethods]
-            impl PyJSValue {
+        #[gen_stub_pymethods]
+        #[pymethods]
+        impl PyJSValue {
+            $(
                 #[doc = $doc]
                 pub fn $method(&self) -> Option<$type> {
                     if !self.$check() {
@@ -42,8 +46,29 @@ macro_rules! define_to_methods {
                     }
                     Some(self.0.handle().$method())
                 }
-            }
-        )*
+            )*
+        }
+
+    };
+}
+
+// Macro for generating type conversion methods to specific JS types
+macro_rules! define_conversion_methods {
+    ($(($method:ident, $js_type:ty, $py_type:ty, $doc:expr)),* $(,)?) => {
+        #[gen_stub_pymethods]
+        #[pymethods]
+        impl PyJSValue {
+            $(
+                #[doc = $doc]
+                pub fn $method(&self) -> PyResult<$py_type> {
+                    with_js_cx(|cx| {
+                        <$js_type>::from_value(cx, &self.0, true, ())
+                            .to_value_err(concat!("Failed to convert to ", stringify!($js_type)))
+                            .map(|x| x.extend_lifetime().into())
+                    })
+                }
+            )*
+        }
     };
 }
 
@@ -119,6 +144,19 @@ impl From<JSValue<'static>> for PyJSValue {
     }
 }
 
+impl<'a> TryFrom<&JSValue<'a>> for PyJSValue {
+    type Error = PyErr;
+    fn try_from(value: &JSValue<'a>) -> Result<Self, Self::Error> {
+        with_js_cx(|cx| {
+            println!("value: {:?}", value);
+            let owned_value = JSValue::from_value(cx, value, true, ())
+                .to_runtime_err("Failed to convert to JSValue")?;
+            println!("owned_value: {:?}", owned_value);
+            Ok(PyJSValue(owned_value.extend_lifetime()))
+        })
+    }
+}
+
 impl<'py> FromPyObject<'py> for PyJSValue {
     fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
         if let Ok(js_val) = ob.downcast::<PyJSValue>() {
@@ -179,15 +217,6 @@ impl PyJSValue {
         with_js_cx(|cx| JSValue::symbol(cx, &value.0).extend_lifetime()).into()
     }
 
-    /// Converts a [JSValue] to an [JSObject].
-    pub fn to_object(&self) -> PyResult<PyJSObject> {
-        if !self.is_object() {
-            return Err(PyValueError::new_err(
-                "Failed to convert to JSObject, value is not an object",
-            ));
-        }
-        Ok(with_js_cx(|cx| self.0.to_object(cx).extend_lifetime()).into())
-    }
     /// Compares two values for equality using the [SameValue algorithm](https://tc39.es/ecma262/multipage/abstract-operations.html#sec-samevalue).
     /// This is identical to strict equality (===), except that NaN's are equal and 0 !== -0.
     pub fn is_same(&self, other: &Self) -> bool {
@@ -216,7 +245,7 @@ impl PyJSValue {
         with_js_cx(|cx| JSValue::null(cx).extend_lifetime()).into()
     }
 
-    /// basically "typeof" 
+    /// basically "typeof"
     pub fn debug_info(&self) -> String {
         let type_str = r#typeof(self);
         with_js_cx(|cx| {
@@ -266,4 +295,11 @@ define_to_methods! {
     (to_int32, is_int32, i32, "Converts to an integer if the value is a 32-bit integer."),
     (to_double, is_double, f64, "Converts to a double if the value is a double."),
     (to_number, is_number, f64, "Converts to a number if the value is a number."),
+}
+
+define_conversion_methods! {
+    (to_function, JSFunction, PyJSFunction, "Converts to a JSFunction if the value is a function."),
+    (to_promise, JSPromise, PyJSPromise, "Converts to a JSPromise if the value is a promise."),
+    (to_object, JSObject, PyJSObject, "Converts to a JSObject if the value is an object."),
+    (to_symbol, Symbol, PySymbol, "Converts to a Symbol if the value is a symbol."),
 }

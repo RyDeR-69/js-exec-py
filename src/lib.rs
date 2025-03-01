@@ -1,12 +1,13 @@
 mod errors;
+mod loader;
 pub mod runtime;
 mod traits;
 mod types;
 
+use crate::runtime::with_js_cx;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 use pyo3_stub_gen::{define_stub_info_gatherer, module_variable};
-use crate::runtime::with_js_cx;
 
 /// # js-exec
 ///
@@ -62,7 +63,7 @@ use crate::runtime::with_js_cx;
 fn js_exec(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register functions
     m.add_function(wrap_pyfunction!(r#typeof, m)?)?;
-    
+
     // Register classes
     m.add_class::<runtime::PythonJSRuntime>()?;
     m.add_class::<types::value::PyJSValue>()?;
@@ -80,6 +81,9 @@ fn js_exec(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<types::function::PyJSFunction>()?;
     m.add_class::<types::property_key::PyPropertyKey>()?;
     m.add_class::<types::sourcemap::PySourceMap>()?;
+    m.add_class::<types::module::PyJSModule>()?;
+    m.add_class::<types::promise::PyJSPromise>()?;
+    m.add_class::<types::promise::PyJSPromiseState>()?;
 
     // Register custom error types
     // m.add("JSRuntimeError", py.get_type::<errors::JSRuntimeError>())?;

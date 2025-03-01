@@ -1,10 +1,13 @@
 pub mod bigint;
+pub mod callable;
 pub mod context;
 pub mod es_class;
 pub mod function;
 pub mod iterator_flags;
+pub mod module;
 pub mod object;
 pub mod owned_key;
+pub mod promise;
 pub mod property_descriptor;
 pub mod property_flags;
 pub mod property_key;

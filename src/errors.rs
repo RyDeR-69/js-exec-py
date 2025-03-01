@@ -1,7 +1,6 @@
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-
 /// Creates a PyValueError with a formatted message
 ///
 /// # Arguments

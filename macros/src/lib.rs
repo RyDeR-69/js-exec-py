@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use quote::{quote};
+use quote::quote;
 use syn::{ItemEnum, parse_macro_input};
 
 /// Add mappings to and from another enum that has the exact same fields.

@@ -6,6 +6,7 @@ use crate::types::symbol::PySymbol;
 use crate::types::value::PyJSValue;
 use ion::conversions::{ToPropertyKey, ToValue};
 use ion::{Context, PropertyKey};
+use maplit::hashset;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -137,11 +138,9 @@ impl PyStubType for PropertyKeyTypes {
     fn type_output() -> TypeInfo {
         TypeInfo {
             name: "typing.Union[builtins.str, PropertyKey]".to_string(),
-            import: {
-                let mut import = std::collections::HashSet::new();
-                import.insert("builtins".into());
-                import.insert("typing".into());
-                import
+            import: hashset! {
+                "builtins".into(),
+                "typing".into(),
             },
         }
     }

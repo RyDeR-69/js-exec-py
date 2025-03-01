@@ -1,8 +1,8 @@
 use crate::errors::ErrorHandling;
 use crate::runtime::with_js_cx;
 use crate::traits::ExtendLifetime;
+use ion::format::Config;
 use ion::format::primitive::format_primitive;
-use ion::format::{Config};
 use ion::{BigInt as JSBigInt, Value as JSValue};
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};

@@ -2,7 +2,7 @@ use pyo3_stub_gen::{Result, TypeInfo};
 
 fn main() -> Result<()> {
     let mut stub = js_exec::stub_info()?;
-    
+
     for (_, module) in stub.modules.iter_mut() {
         for (_, class) in module.class.iter_mut() {
             if let Some(new) = class.new.take() {

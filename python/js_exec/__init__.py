@@ -18,6 +18,9 @@ __all__ = [
     "IteratorFlags",
     "OwnedKey",
     "SourceMap",
+    "JSModule",
+    "JSPromise",
+    "JSPromiseState",
     # functions
     "typeof",
 ]

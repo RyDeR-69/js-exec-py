@@ -1603,10 +1603,12 @@ checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 
 [[package]]
 name = "js-exec-py"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
+ "dunce",
  "ion",
  "js-exec-py-macros",
+ "maplit",
  "modules",
  "mozjs",
  "ouroboros",
@@ -1614,6 +1616,8 @@ dependencies = [
  "pyo3-stub-gen",
  "runtime",
  "sourcemap",
+ "tokio",
+ "url",
 ]
 
 [[package]]

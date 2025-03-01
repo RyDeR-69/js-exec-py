@@ -1,11 +1,13 @@
 use crate::errors::ErrorHandling;
 use crate::traits::ExtendLifetime;
+use crate::types::module::PyJSModule;
+use crate::types::promise::PyJSPromise;
 use crate::types::sourcemap::PySourceMap;
 use crate::types::value::PyJSValue;
 use ion::Context as JSContext;
+use ion::module::Module;
 use ion::script::Script;
 use js_runtime::config::{CONFIG, Config, LogLevel};
-use js_runtime::module::Loader;
 use js_runtime::{Runtime as JSRuntime, RuntimeBuilder as JSRuntimeBuilder};
 use modules::Modules;
 use mozjs::rust::{JSEngine, Runtime as RustRuntime};
@@ -14,9 +16,14 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use std::cell::RefCell;
+use tokio::runtime::Runtime as TokioRuntime;
 
 thread_local! {
-    pub static JS_RUNTIME_CONTEXT: RefCell<Option<JSRuntimeContext>> = const { RefCell::new(None) };
+    static JS_RUNTIME_CONTEXT: RefCell<Option<JSRuntimeContext>> = const { RefCell::new(None) };
+    static TOKIO_RT: TokioRuntime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("failed to create a new tokio runtime");
 }
 
 /// Executes a function with access to the JavaScript runtime.
@@ -92,7 +99,7 @@ impl PythonJSRuntime {
     /// # Returns
     /// A new PythonJSRuntime instance
     #[new]
-    #[pyo3(signature = (microtask_queue = false, macrotask_queue = false, script = false, typescript = true, log_level = 0))]
+    #[pyo3(signature = (microtask_queue = true, macrotask_queue = true, script = false, typescript = true, log_level = 0))]
     pub fn new(
         microtask_queue: bool,
         macrotask_queue: bool,
@@ -126,7 +133,7 @@ impl PythonJSRuntime {
                     return Err(PyRuntimeError::new_err("Failed to create JS runtime"));
                 }
                 let js_context = JSContext::from_runtime(&runtime);
-                let mut rt_builder = JSRuntimeBuilder::<Loader, _>::new();
+                let mut rt_builder = JSRuntimeBuilder::<_, _>::new();
                 if microtask_queue {
                     rt_builder = rt_builder.microtask_queue();
                 }
@@ -140,7 +147,7 @@ impl PythonJSRuntime {
                     js_context,
                     js_runtime_builder: |js_context: &mut JSContext| {
                         rt_builder
-                            .modules(Loader::default())
+                            .modules(crate::loader::Loader::default())
                             .standard_modules(Modules)
                             .build(js_context)
                     },
@@ -153,7 +160,8 @@ impl PythonJSRuntime {
         Ok(PythonJSRuntime)
     }
 
-    /// Compiles and evaluates JavaScript code.
+    /// Compiles and evaluates a script with a given filename, and returns its return value.
+    /// Returns [Err] when script compilation fails or an exception occurs during script evaluation.
     ///
     /// This method compiles the provided JavaScript code and executes it in the
     /// JavaScript runtime, returning the result as a JSValue.
@@ -185,30 +193,25 @@ impl PythonJSRuntime {
         })
     }
 
-    /// TODO: Full support for modules
+    /// Compiles and evaluates a [Module] with the given source and filename.
+    /// On success, returns the compiled module object and a promise. The promise resolves with the return value of the module.
+    /// The promise is a byproduct of enabling top-level await.
     #[pyo3(signature = (source, filename = "inline.js", path = Some("inline.js")))]
     pub fn compile_and_evaluate_module(
         &self,
         source: &str,
         filename: &str,
         path: Option<&str>,
-    ) -> PyResult<(bool, Option<PyJSValue>)> {
+    ) -> PyResult<(PyJSModule, Option<PyJSPromise>)> {
         with_js_cx(|cx| {
-            let (module, promise) = ion::module::Module::compile_and_evaluate(
-                cx,
-                filename,
-                path.map(AsRef::as_ref),
-                source,
-            )
-            .map_err(|e| PyRuntimeError::new_err(e.format(cx)))?;
-            if let Some(promise) = promise {
-                let result = promise.result(cx);
-                return Ok((
-                    module.is_linked(),
-                    Some(PyJSValue::from(result.extend_lifetime())),
-                ));
-            }
-            Ok((module.is_linked(), None))
+            let (module, promise) =
+                Module::compile_and_evaluate(cx, filename, path.map(AsRef::as_ref), source)
+                    .map_err(|e| PyRuntimeError::new_err(e.format(cx)))?;
+
+            Ok((
+                module.extend_lifetime().into(),
+                promise.map(|p| p.extend_lifetime().into()),
+            ))
         })
     }
 
@@ -222,6 +225,18 @@ impl PythonJSRuntime {
         let (compiled_js, sourcemap) = js_runtime::typescript::compile_typescript(filename, source)
             .to_runtime_err("Failed to compile TypeScript")?;
         Ok((compiled_js, PySourceMap::from(sourcemap)))
+    }
+
+    pub fn run_event_loop(&self) -> PyResult<()> {
+        with_js_runtime(|rt| {
+            TOKIO_RT.with(|tokio_rt| {
+                tokio_rt.block_on(async {
+                    rt.run_event_loop()
+                        .await
+                        .map_err(|e| PyRuntimeError::new_err(e.map(|inner| inner.format(rt.cx()))))
+                })
+            })
+        })
     }
 }
 

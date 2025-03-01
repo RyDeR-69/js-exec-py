@@ -78,17 +78,21 @@ impl PyJSFunction {
     /// Calls the [JSFunction] with the given `this` [JSObject] and arguments.
     /// Returns the result of the [JSFunction] as a [JSValue].
     /// Returns [Err] if the function call fails or an exception occurs.
-    #[pyo3(signature = (args, this = None))]
-    pub fn call(&self, args: Vec<PyJSValue>, this: Option<PyJSObject>) -> PyResult<PyJSValue> {
+    #[pyo3(signature = (args=None, this = None))]
+    pub fn call(
+        &self,
+        args: Option<Vec<PyJSValue>>,
+        this: Option<PyJSObject>,
+    ) -> PyResult<PyJSValue> {
         with_js_runtime(|rt| {
             let cx = rt.cx();
-            let args = args.into_iter().map(|a| a.0).collect::<Vec<_>>();
+            let args = args.map(|v| v.into_iter().map(|a| a.0).collect::<Vec<_>>());
             let result = if let Some(this_obj) = this {
                 // Use provided 'this'
-                self.0.call(cx, &this_obj.0, args.as_slice())
+                self.0.call(cx, &this_obj.0, args.as_deref().unwrap_or(&[]))
             } else {
                 // Use global object as 'this'
-                self.0.call(cx, rt.global(), args.as_slice())
+                self.0.call(cx, rt.global(), args.as_deref().unwrap_or(&[]))
             }
             .to_runtime_err("Failed to call function")?;
             Ok::<_, PyErr>(result.extend_lifetime().into())
