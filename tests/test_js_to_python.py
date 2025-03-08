@@ -9,7 +9,10 @@ class TypeConversionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a single JavaScript runtime for all tests
-        cls.runtime = Runtime()
+        if Runtime.is_initialized():
+            cls.runtime = Runtime.empty()
+        else:
+            cls.runtime = Runtime()
 
     def test_boolean_conversion(self):
         """Test conversion between JavaScript and Python booleans."""

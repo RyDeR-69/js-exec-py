@@ -8,7 +8,10 @@ class JSFunctionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a single JavaScript runtime for all tests
-        cls.runtime = Runtime()
+        if Runtime.is_initialized():
+            cls.runtime = Runtime.empty()
+        else:
+            cls.runtime = Runtime()
 
     def test_function_creation_and_call(self):
         """Test creating and calling a JavaScript function."""

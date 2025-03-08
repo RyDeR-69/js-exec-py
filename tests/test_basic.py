@@ -8,7 +8,11 @@ class BasicJSExecutionTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.runtime = Runtime()
+        # Create a single JavaScript runtime for all tests
+        if Runtime.is_initialized():
+            cls.runtime = Runtime.empty()
+        else:
+            cls.runtime = Runtime()
 
     def test_simple_expression(self):
         """Test evaluating a simple JavaScript expression."""

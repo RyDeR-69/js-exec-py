@@ -238,6 +238,20 @@ impl PythonJSRuntime {
             })
         })
     }
+
+    #[staticmethod]
+    fn is_initialized() -> bool {
+        JS_RUNTIME_CONTEXT.with(|cell| {
+            cell.try_borrow()
+                .map(|maybe_runtime| maybe_runtime.is_some())
+                .unwrap_or(false)
+        })
+    }
+    
+    #[staticmethod]
+    fn empty() -> Self {
+        PythonJSRuntime
+    }
 }
 
 impl Drop for PythonJSRuntime {

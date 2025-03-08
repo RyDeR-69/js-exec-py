@@ -8,7 +8,10 @@ class ErrorHandlingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a single JavaScript runtime for all tests
-        cls.runtime = Runtime()
+        if Runtime.is_initialized():
+            cls.runtime = Runtime.empty()
+        else:
+            cls.runtime = Runtime()
 
     @contextmanager
     def assert_raises_js_error(self, expected_substring=None):
@@ -34,7 +37,7 @@ class ErrorHandlingTests(unittest.TestCase):
     def test_type_error(self):
         """Test handling of JavaScript type errors."""
         with self.assert_raises_js_error("TypeError"):
-            self.runtime.compile_and_evaluate_script("let x = null; x.property")
+            self.runtime.compile_and_evaluate_script("let a = null; a.property")
 
     def test_range_error(self):
         """Test handling of JavaScript range errors."""
